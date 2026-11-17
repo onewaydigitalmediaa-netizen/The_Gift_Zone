@@ -1,0 +1,20 @@
+{
+  "name": "the-gift-zone-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["frontend", "backend", "admin panel"],
+  "scripts": {
+    "start": "npm run start -w backend",
+    "build:deploy": "node scripts/build-deploy.mjs",
+    "dev": "concurrently -n API,STORE,ADMIN -c green,magenta,cyan \"npm run dev -w backend\" \"npm run dev -w frontend\" \"npm run dev -w gift-zone-admin\"",
+    "dev:api": "npm run dev -w backend",
+    "dev:store": "npm run dev -w frontend",
+    "dev:admin": "npm run dev -w gift-zone-admin",
+    "build": "npm run build -w frontend && npm run build -w gift-zone-admin",
+    "db:generate": "npm run db:generate -w backend",
+    "db:push": "npm run db:push -w backend",
+    "db:seed": "npm run db:seed -w backend",
+    "test": "npm run test -w backend"
+  },
+  "devDependencies": {"concurrently": "^9.1.2"}
+}

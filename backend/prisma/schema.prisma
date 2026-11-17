@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+ id String @id @default(cuid())
+ name String @default("Gift Lover")
+ email String? @unique
+ phone String? @unique
+ passwordHash String?
+ googleId String? @unique
+ facebookId String? @unique
+ role Role @default(CUSTOMER)
+ sessionVersion Int @default(0)
+ referralCode String @unique
+ referredBy String?
+ createdAt DateTime @default(now())
+ @@index([role,createdAt])
+ addresses Address[]
+ orders Order[]
+ wishlist Wishlist[]
+ wallet WalletTransaction[]
+ reminders Reminder[]
+ reviews Review[]
+ tickets SupportTicket[]
+ passwordResetTokens PasswordResetToken[]
+}
+model PasswordResetToken {
+ id String @id @default(cuid())
+ tokenHash String @unique
+ userId String
+ user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+ expiresAt DateTime
+ usedAt DateTime?
+ createdAt DateTime @default(now())
+ @@index([userId, createdAt])
+ @@index([expiresAt])
+}
+model Otp {
+ id String @id @default(cuid())
+ phone String
+ codeHash String
+ attempts Int @default(0)
+ expiresAt DateTime
+ createdAt DateTime @default(now())
+}
+model Category {
+ id String @id @default(cuid())
+ name String
+ slug String @unique
+ description String @default("")
+ image String @default("")
+ sortOrder Int @default(0)
+ isActive Boolean @default(true)
+ products Product[]
+}
+model Product {
+ id String @id @default(cuid())
+ name String
+ slug String @unique
+ description String @default("")
+ price Int
+ compareAtPrice Int?
+ image String @default("")
+ images String @default("[]")
+ categoryId String
+ category Category @relation(fields:[categoryId], references:[id])
+ sku String @unique
+ stock Int @default(100)
+ rating Float @default(4.8)
+ ratingCount Int @default(0)
+ featured Boolean @default(false)
+ bestseller Boolean @default(false)
+ personalized Boolean @default(false)
+ variants String @default("[]")
+ addOns String @default("[]")
+ tags String @default("[]")
+ isActive Boolean @default(true)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([categoryId,createdAt])
+ @@index([isActive,createdAt])
+ @@index([name])
+ reviews Review[]
+ wishlist Wishlist[]
+ orderItems OrderItem[]
+}
+model Banner {
+ id String @id @default(cuid())
+ title String
+ subtitle String @default("")
+ description String @default("")
+ image String @default("")
+ cta String @default("Explore Collection")
+ link String @default("/category/personalized-gifts")
+ sortOrder Int @default(0)
+ active Boolean @default(true)
+}
+model Address {
+ id String @id @default(cuid())
+ userId String
+ user User @relation(fields:[userId],references:[id])
+ name String
+ phone String
+ line1 String
+ line2 String @default("")
+ city String
+ state String
+ pincode String
+ isDefault Boolean @default(false)
+ orders Order[]
+}
+model Order {
+ id String @id @default(cuid())
+ number String @unique
+ userId String
+ user User @relation(fields:[userId],references:[id])
+ addressId String
+ address Address @relation(fields:[addressId],references:[id])
+ status OrderStatus @default(PENDING)
+ paymentStatus PaymentStatus @default(UNPAID)
+ paymentMethod String @default("COD")
+ razorpayOrderId String? @unique
+ razorpayPaymentId String?
+ subtotal Int
+ discount Int @default(0)
+ deliveryFee Int @default(0)
+ walletUsed Int @default(0)
+ total Int
+ couponCode String?
+ trackingNumber String?
+ courier String?
+ note String @default("")
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ items OrderItem[]
+ @@index([createdAt])
+ @@index([status,createdAt])
+ @@index([userId,createdAt])
+}
+model OrderItem {
+ id String @id @default(cuid())
+ orderId String
+ order Order @relation(fields:[orderId],references:[id])
+ productId String
+ product Product @relation(fields:[productId],references:[id])
+ quantity Int
+ unitPrice Int
+ customization String @default("{}")
+ @@index([productId])
+}
+model Wishlist {
+ id String @id @default(cuid())
+ userId String
+ productId String
+ user User @relation(fields:[userId],references:[id])
+ product Product @relation(fields:[productId],references:[id])
+ @@unique([userId,productId])
+}
+model WalletTransaction {
+ id String @id @default(cuid())
+ userId String
+ user User @relation(fields:[userId],references:[id])
+ amount Int
+ type String
+ note String
+ reference String?
+ createdAt DateTime @default(now())
+}
+model Reminder {
+ id String @id @default(cuid())
+ userId String
+ user User @relation(fields:[userId],references:[id])
+ name String
+ date String
+ occasion String
+ createdAt DateTime @default(now())
+}
+model Review {
+ id String @id @default(cuid())
+ userId String
+ productId String
+ user User @relation(fields:[userId],references:[id])
+ product Product @relation(fields:[productId],references:[id])
+ rating Int
+ comment String
+ approved Boolean @default(false)
+ createdAt DateTime @default(now())
+ @@index([approved,createdAt])
+ @@unique([userId,productId])
+}
+model Coupon {
+ id String @id @default(cuid())
+ code String @unique
+ type String @default("PERCENT")
+ value Int
+ minOrder Int @default(0)
+ maxDiscount Int?
+ maxUses Int @default(100)
+ usedCount Int @default(0)
+ expiresAt DateTime?
+ active Boolean @default(true)
+}
+model BulkLead {
+ id String @id @default(cuid())
+ name String
+ email String
+ phone String
+ company String @default("")
+ quantity Int @default(10)
+ requirement String
+ status String @default("NEW")
+ createdAt DateTime @default(now())
+ @@index([status,createdAt])
+}
+model SupportTicket {
+ id String @id @default(cuid())
+ userId String?
+ user User? @relation(fields:[userId],references:[id])
+ name String
+ email String
+ subject String
+ message String
+ status String @default("OPEN")
+ createdAt DateTime @default(now())
+ @@index([status,createdAt])
+}
+model Setting {
+  key   String @id
+  value String
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  STAFF
+}
