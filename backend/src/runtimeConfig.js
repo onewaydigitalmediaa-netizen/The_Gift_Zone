@@ -11,7 +11,7 @@ export function runtimeConfig(env=process.env) {
  const frontend=origin('FRONTEND_URL','http://localhost:5173');
  const admin=origin('ADMIN_URL','http://localhost:5174');
  const adminPath=env.ADMIN_APP_PATH??(production?'/admin':'');
- if(!/^\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]*$/.test(adminPath)||adminPath==='//')throw new Error('ADMIN_APP_PATH must be a URL path beginning with /');
+ if(adminPath&&!/^\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]*$/.test(adminPath))throw new Error('ADMIN_APP_PATH must be blank or a URL path beginning with /');
  const api=origin('PUBLIC_API_URL','http://localhost:4000');
  const cookieDomain=env.COOKIE_DOMAIN||'';
  if(cookieDomain&&!/^\.?[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/.test(cookieDomain))throw new Error('COOKIE_DOMAIN must be a bare domain such as .example.com');
