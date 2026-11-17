@@ -51,7 +51,7 @@ configured with a shared store. The current limit counters are per process.
 | `JWT_SECRET` | A private random string of at least 32 characters |
 | `FRONTEND_URL` | Your exact HTTPS origin, such as `https://gifts.example.com` |
 | `ADMIN_URL` | The exact admin browser origin; use the same origin as the storefront for a same-origin setup |
-| `ADMIN_APP_PATH` | `/admin` for the Vercel admin project; blank for local Vite dev |
+| `ADMIN_APP_PATH` | `/admin` when the admin is mounted under the storefront domain; blank when the admin has its own Vercel domain |
 | `PUBLIC_API_URL` | Your HTTPS origin without a trailing slash |
 | `TRUST_PROXY` | Number of trusted proxy hops; use the value required by your host, not a guess |
 | `COOKIE_DOMAIN` | Optional shared parent domain such as `.gifts.example.com` when storefront, admin, and API use sibling subdomains |
@@ -141,11 +141,13 @@ The Vite projects use their `vercel.ts` files for SPA deep links and `/api` and
 Set `API_ORIGIN` on the storefront and admin projects to the deployed backend
 URL. Keep `VITE_API_URL` empty so browser requests use same-origin `/api`
 rewrites. Set `VITE_STORE_URL` to the storefront origin in the admin project.
-The admin project uses `/admin/` as its base path.
+For a separate admin Vercel domain, leave `VITE_ADMIN_BASE_PATH` unset (the
+default is `/`). If you mount admin under the storefront domain at `/admin/`, set
+`VITE_ADMIN_BASE_PATH=/admin/` and `ADMIN_APP_PATH=/admin`.
 
 Backend production variables: `NODE_ENV=production`, `FRONTEND_URL` equal to the
 storefront origin, `ADMIN_URL` equal to the admin origin,
-`ADMIN_APP_PATH=/admin`, `PUBLIC_API_URL` equal to the backend origin,
+`ADMIN_APP_PATH` matching the admin deployment path, `PUBLIC_API_URL` equal to the backend origin,
 `TRUST_PROXY=1`, `DATABASE_URL`, `JWT_SECRET`, `ADMIN_EMAIL`,
 `ADMIN_PASSWORD`, `BLOB_READ_WRITE_TOKEN`, `BLOB_PUBLIC_READ_WRITE_TOKEN`, and any enabled SMTP, Twilio, OAuth,
 or Razorpay variables. Configure Preview values separately; use a separate Neon
