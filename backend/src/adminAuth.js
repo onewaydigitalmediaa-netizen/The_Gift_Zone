@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { createResetMailer, acceptedRecipient, smtpErrorMetadata, MAIL_UNAVAILABLE } from './resetMailer.js';
 import { canResetAdmin, configuredResetAdmin, normalizeEmail } from './adminResetPolicy.js';
-import { adminUrl, assert, clearSession, db, wrap } from './common.js';
+import { adminUrl, config, assert, clearSession, db, wrap } from './common.js';
 
 const router = Router();
 const RESET_TTL_MS = 15 * 60 * 1000;
@@ -39,7 +39,7 @@ router.post('/forgot-password', wrap(async (req, res) => {
     });
     const transport = mailer.transport;
       try {
-        const resetUrl = `${adminUrl.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
+        const resetUrl = `${adminUrl.replace(/\/$/, '')}${config.adminPath}/reset-password?token=${encodeURIComponent(token)}`;
         const delivery = await transport.sendMail({ from: mailer.from, to: user.email, subject: 'Reset Your THE GIFT ZONE Admin Password', text: `Hello,\n\nWe received a request to reset your THE GIFT ZONE administrator password.\n\nOpen this link to create a new password: ${resetUrl}\n\nThis link expires in 15 minutes. If you did not request this, ignore this email.`, html: resetEmail(resetUrl) });
         if (!acceptedRecipient(delivery, user.email)) throw Object.assign(new Error('Recipient rejected'), { code: 'EENVELOPE' });
         console.info('admin_password_reset: smtp_accepted');

@@ -36,7 +36,7 @@ export async function api(path,opts={}){
    bodyText=await response.text();
   }catch(error){
    if(error?.name==='AbortError')throw Error('The request timed out. Please check the backend or database connection.');
-   throw Error('API unavailable. Start the backend at http://localhost:4000')
+   throw Error('API unavailable. Check the deployment or start the backend.')
   }finally{clearTimeout(timeout);externalSignal?.removeEventListener('abort',abortRequest)}
   // Rate limiters and proxies may send plain text. A parsing failure is not
   // a connection failure: retain the HTTP status instead of reporting offline.

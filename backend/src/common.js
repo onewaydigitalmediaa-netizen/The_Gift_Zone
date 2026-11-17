@@ -2,15 +2,17 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
-export const db=new PrismaClient();
-export const isProd=process.env.NODE_ENV==='production';
+import {runtimeConfig,sessionCookieOptions} from './runtimeConfig.js';
+export const config=runtimeConfig();
+export const db=globalThis.giftZonePrisma??=new PrismaClient();
+export const isProd=config.production;
 export const measureDb=async(label,operation)=>{
  const started=performance.now();
  try{return await operation()}
  finally{if(!isProd)console.log(`[prisma] ${label} ${Math.round(performance.now()-started)}ms`)}
 };
-export const frontend=process.env.FRONTEND_URL||'http://localhost:5173';
-export const adminUrl=process.env.ADMIN_URL||'http://localhost:5174';
+export const frontend=config.frontend;
+export const adminUrl=config.admin;
 export const secret=process.env.JWT_SECRET||'';
 export const requireSecret=()=>{if(!secret||secret.length<32||secret.startsWith('replace-with-'))throw new Error('Set JWT_SECRET to a random value of at least 32 characters in backend/.env');};
 export const wrap=(fn)=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
@@ -23,8 +25,8 @@ export const pick=(obj,keys)=>Object.fromEntries(keys.filter(k=>obj?.[k]!==undef
 export const publicUser=u=>u&&pick(u,['id','name','email','phone','role','referralCode','createdAt']);
 export const productDto=p=>p?{...p,images:json(p.images),variants:json(p.variants),addOns:json(p.addOns),tags:json(p.tags)}:p;
 export const createToken=u=>{requireSecret();return jwt.sign({sub:u.id,role:u.role,sv:u.sessionVersion||0},secret,{expiresIn:'7d',issuer:'the-gift-zone'});};
-export const setSession=(res,u)=>res.cookie('gz_session',createToken(u),{httpOnly:true,secure:isProd,sameSite:'lax',maxAge:7*24*3600*1000,path:'/'});
-export const clearSession=res=>res.clearCookie('gz_session',{httpOnly:true,secure:isProd,sameSite:'lax',path:'/'});
+export const setSession=(res,u)=>res.cookie('gz_session',createToken(u),{...sessionCookieOptions(isProd,config.cookieDomain),maxAge:7*24*3600*1000});
+export const clearSession=res=>res.clearCookie('gz_session',sessionCookieOptions(isProd,config.cookieDomain));
 export const authenticate=wrap(async(req,res,next)=>{
   const token=req.cookies?.gz_session;
   if(token){try{let payload=jwt.verify(token,secret,{issuer:'the-gift-zone'});const user=await measureDb('auth.session',()=>db.user.findUnique({where:{id:payload.sub},select:{id:true,name:true,email:true,phone:true,role:true,referralCode:true,createdAt:true,sessionVersion:true}}));req.user=user&&Number(payload.sv||0)===user.sessionVersion?user:null;}catch{req.user=null}}

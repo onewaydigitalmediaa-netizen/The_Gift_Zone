@@ -1,9 +1,10 @@
 import {Router} from 'express';
 import crypto from 'node:crypto';
+import {ownsPhoto} from './uploadPolicy.js';
 import {db,wrap,assert,userOnly,shortId,getBalance,settings,httpError,json} from './common.js';
 const r=Router();
 const shippingFree = config=>Math.max(0,Number(config.shippingFreeAbove)||1499);
-async function priceOrder({items,couponCode,walletRequested},tx){
+async function priceOrder({items,couponCode,walletRequested},tx,userId){
   assert(Array.isArray(items)&&items.length>0&&items.length<=40,'Add at least one item to your cart');
   let subtotal=0;let detailed=[];const quantities=new Map();
   for(const item of items){
@@ -21,6 +22,7 @@ async function priceOrder({items,couponCode,walletRequested},tx){
     let addOnPrice=0;
     for(const name of addOns){const option=allowedAddOns.find(a=>a.name===name);assert(option,'Invalid product add-on');addOnPrice+=option.price;}
     const customization={variant:variantName||null,addOns,text:String(item.customization?.text||'').slice(0,500),photoUrl:String(item.customization?.photoUrl||'').slice(0,500),giftMessage:String(item.customization?.giftMessage||'').slice(0,350)};
+    assert(ownsPhoto(customization.photoUrl,userId),'Please upload your personalization photo again while signed in');
     const unitPrice=p.price+(variant?.priceDelta||0)+addOnPrice;
     subtotal+=unitPrice*item.quantity;
     detailed.push({productId:p.id,quantity:item.quantity,unitPrice,customization:JSON.stringify(customization),product:p});
@@ -38,7 +40,7 @@ async function priceOrder({items,couponCode,walletRequested},tx){
   return {detailed,subtotal,discount,deliveryFee,usedCoupon,config};
 }
 r.post('/quote',userOnly,wrap(async(req,res)=>{
- const {subtotal,discount,deliveryFee,usedCoupon,config}=await priceOrder(req.body,db);
+ const {subtotal,discount,deliveryFee,usedCoupon,config}=await priceOrder(req.body,db,req.user.id);
  const balance=await getBalance(req.user.id);
  const walletMax=Math.floor((subtotal-discount)*Math.max(0,Math.min(100,Number(config.walletMaxPercent)||25))/100);
  const requested=Math.max(0,Number(req.body.walletRequested)||0);
@@ -51,7 +53,7 @@ r.post('/',userOnly,wrap(async(req,res)=>{
  const address=await db.address.findFirst({where:{id:addressId,userId:req.user.id}});assert(address,'Select a saved delivery address');
  if(paymentMethod==='RAZORPAY')assert(process.env.RAZORPAY_KEY_ID&&process.env.RAZORPAY_KEY_SECRET,'Online payments are not configured yet',503);
  const order=await db.$transaction(async tx=>{
-   const {detailed,subtotal,discount,deliveryFee,usedCoupon,config}=await priceOrder(req.body,tx);
+   const {detailed,subtotal,discount,deliveryFee,usedCoupon,config}=await priceOrder(req.body,tx,req.user.id);
    const balance=await getBalance(req.user.id,tx);
    const requestWallet=Math.max(0,Number(req.body.walletRequested)||0);
    assert(Number.isInteger(requestWallet),'Invalid wallet redemption amount');

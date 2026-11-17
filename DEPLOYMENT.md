@@ -50,17 +50,25 @@ configured with a shared store. The current limit counters are per process.
 | `DATABASE_URL` | Your private Neon PostgreSQL connection URL with SSL |
 | `JWT_SECRET` | A private random string of at least 32 characters |
 | `FRONTEND_URL` | Your exact HTTPS origin, such as `https://gifts.example.com` |
-| `ADMIN_URL` | The same origin followed by `/admin` |
+| `ADMIN_URL` | The exact admin browser origin; use the same origin as the storefront for a same-origin setup |
+| `ADMIN_APP_PATH` | `/admin` for the Vercel admin project; blank for local Vite dev |
 | `PUBLIC_API_URL` | Your HTTPS origin without a trailing slash |
 | `TRUST_PROXY` | Number of trusted proxy hops; use the value required by your host, not a guess |
+| `COOKIE_DOMAIN` | Optional shared parent domain such as `.gifts.example.com` when storefront, admin, and API use sibling subdomains |
 | `UPLOAD_DIR` | Absolute path to the mounted persistent disk |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob read-write token for direct uploads |
 | `ADMIN_EMAIL` | Existing administrator email; also used for password reset eligibility |
 | `ADMIN_PASSWORD` | Initial password used only by manual seeding; remove after setup |
 
-`ADMIN_URL` includes the admin path for reset links. CORS uses the origins of the
+`ADMIN_APP_PATH` is appended to reset links. CORS uses the origins of the
 frontend/admin URLs. Session cookies are HTTP-only and secure in production. This
 single-origin deployment uses the existing `SameSite=Lax` cookies; no cross-site
 cookie configuration is needed. Browser API requests use relative `/api` URLs.
+If you deploy the three Vercel projects on sibling custom subdomains, set
+`COOKIE_DOMAIN` to their shared parent domain so the HTTP-only session and OAuth
+state cookies are available on all three hosts. Vercel preview domains do not
+share a cookie domain; test preview login independently or use one same-origin
+custom domain.
 
 Generate a JWT secret locally with:
 
@@ -111,3 +119,46 @@ versioned migrations and database backups for subsequent production schema chang
 
 Local tests and builds do not verify hosting, DNS, real email/SMS delivery or live
 payments. Complete these checks on the final HTTPS domain before accepting orders.
+
+## Three Vercel projects
+
+Connect the repository to three Vercel projects. Keep each project's Root
+Directory at the repository root so npm workspaces and shared configuration are
+available.
+
+| Project | Root Directory | Build Command | Output Directory |
+| --- | --- | --- | --- |
+| Backend API | `backend` | `npm run build` | leave blank |
+| Storefront | `frontend` | `npm run build` | `dist` |
+| Admin | `admin panel` | `npm run build` | `dist` |
+
+For all three projects use install command `cd .. && npm ci --include=dev`.
+Set the backend Framework Preset to **Express**. Vercel detects the exported
+Express app in `backend/src/server.js`; there is no long-running start command.
+The Vite projects use their `vercel.ts` files for SPA deep links and `/api` and
+`/uploads` rewrites.
+
+Set `API_ORIGIN` on the storefront and admin projects to the deployed backend
+URL. Keep `VITE_API_URL` empty so browser requests use same-origin `/api`
+rewrites. Set `VITE_STORE_URL` to the storefront origin in the admin project.
+The admin project uses `/admin/` as its base path.
+
+Backend production variables: `NODE_ENV=production`, `FRONTEND_URL` equal to the
+storefront origin, `ADMIN_URL` equal to the admin origin,
+`ADMIN_APP_PATH=/admin`, `PUBLIC_API_URL` equal to the backend origin,
+`TRUST_PROXY=1`, `DATABASE_URL`, `JWT_SECRET`, `ADMIN_EMAIL`,
+`ADMIN_PASSWORD`, `BLOB_READ_WRITE_TOKEN`, `BLOB_PUBLIC_READ_WRITE_TOKEN`, and any enabled SMTP, Twilio, OAuth,
+or Razorpay variables. Configure Preview values separately; use a separate Neon
+preview database if preview schema changes are expected.
+
+Create a **private** Vercel Blob store for customer images. The API issues
+short-lived, user-scoped upload tokens. Customer images are served through
+`/uploads/private/*` only after the session owner or an admin is checked. Product
+and banner uploads require an admin session and use the public Blob access mode
+when `BLOB_PUBLIC_READ_WRITE_TOKEN` is configured. Configure a separate public
+Blob store for catalog/banner media and a private store for customer images;
+never expose a Blob token as a `VITE_*` variable.
+
+Direct browser uploads avoid sending 5 MB images through a Vercel Function.
+Existing local disk uploads are not automatically copied to Blob; migrate any
+images that must remain available after deployment with a reviewed script.
