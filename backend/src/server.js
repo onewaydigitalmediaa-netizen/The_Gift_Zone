@@ -17,7 +17,7 @@ const app=express();app.disable('x-powered-by');
 const proxyHops=Number(process.env.TRUST_PROXY||0);
 if(!Number.isInteger(proxyHops)||proxyHops<0)throw new Error('TRUST_PROXY must be a non-negative integer');
 if(proxyHops>0)app.set('trust proxy',proxyHops);
-const origins=[frontend,adminUrl].filter(Boolean);
+const origins=[frontend,adminUrl].filter(Boolean).map(value=>new URL(value).origin);
 app.use(helmet({crossOriginResourcePolicy:{policy:'cross-origin'}}));
 app.use(cors({origin:(o,cb)=>!o||origins.includes(o)?cb(null,true):cb(new Error('Origin blocked')),credentials:true}));
 app.use(express.json({limit:'1mb'}));app.use(cookieParser());

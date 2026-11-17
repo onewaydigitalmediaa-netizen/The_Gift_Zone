@@ -9,7 +9,7 @@ An original, responsive gifting-commerce starter inspired by the user-provided P
 ```text
 the gift zone/
 ├── frontend/         # React 19 + Vite customer storefront
-├── backend/          # Express, Prisma, SQLite, secured REST APIs
+├── backend/          # Express, Prisma, PostgreSQL, secured REST APIs
 ├── admin panel/      # React admin UI (separate Vite app)
 ├── scripts/          # Original sample image generation
 ├── .env.example      # Credentials template
@@ -40,7 +40,7 @@ Requirements: **Node.js 20+**, npm, and internet access to install packages. Ope
 
    Edit `backend/.env` and set a **new random JWT_SECRET of at least 32 characters**, a real `ADMIN_EMAIL` and a long unique `ADMIN_PASSWORD`. The example password is **intentionally not accepted** by the seed script.
 
-3. Generate the database client, create the SQLite tables and seed starter content:
+3. Set `DATABASE_URL` to your private Neon PostgreSQL URL, then generate the database client, create tables and seed starter content (for a new database):
 
    ```bash
    npm run db:generate -w backend
@@ -76,11 +76,11 @@ Requirements: **Node.js 20+**, npm, and internet access to install packages. Ope
 
 ### Backend
 
-- Express REST API with Prisma + SQLite persistence
+- Express REST API with Prisma + PostgreSQL persistence (Neon)
 - Session cookies signed with JWT (httpOnly), protected admin endpoints and two roles: ADMIN and STAFF
 - Stock management, server-authoritative order pricing, coupons, wallet redemption and reward earning after delivery
 - Admin order status transitions, tracking ID and courier management, review moderation, ticket and bulk-lead status
-- SQLite keeps data across restarts. Run `npm run db:seed` again only to create missing starter records; existing product/category edits are preserved.
+- Neon keeps data across restarts. Run `npm run db:seed` again only to create missing starter records; existing product/category edits and passwords are preserved.
 
 ### Admin panel
 
@@ -92,7 +92,7 @@ Requirements: **Node.js 20+**, npm, and internet access to install packages. Ope
 
 ## Authentication setup
 
-- **Phone OTP:** Twilio Verify is preferred: configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_VERIFY_SERVICE_SID`. Accounts using the legacy SMS API can instead configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_PHONE_NUMBER`. In local development, if Twilio is not configured, the 6-digit OTP is printed only to the **backend terminal** (not exposed to the browser). Production returns an error when neither Twilio mode is configured.
+- **Phone OTP:** Configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_PHONE_NUMBER` for the SMS API. In local development, if Twilio is not configured, the 6-digit OTP is printed only to the **backend terminal** (not exposed to the browser). Production returns an error when SMS is not configured.
 - **Google OAuth:** Create web OAuth credentials and configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`; register the authorized redirect URI `http://localhost:4000/api/auth/google/callback`.
 - **Facebook Login:** Create a Meta application, configure `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`; register `http://localhost:4000/api/auth/facebook/callback`. Check Meta's current privacy, app review and supported permissions requirements before launch.
 - **Admin login:** Uses a secure stored password hash. No weak default user is created automatically.
@@ -119,7 +119,7 @@ npm run test -w backend       # Catalog integrity tests
 npm run build                 # Production frontend/admin static bundles
 ```
 
-Running the backend requires a suitable hosted database and deployment configuration for production. This starter uses SQLite for an easy local setup. For multi-instance production traffic, migrate to hosted PostgreSQL, use persistent object storage for images, implement a tested backup strategy, and complete automated end-to-end and security testing.
+For hosting setup, private environment variables, and the single-domain production build, follow [DEPLOYMENT.md](./DEPLOYMENT.md). The app uses Neon PostgreSQL. Uploads require persistent storage; multiple backend instances additionally require shared storage and shared rate limiting. Keep database backups and test the final HTTPS deployment before accepting orders.
 
 ## What is NOT included or ready for production
 
